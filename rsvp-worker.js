@@ -10,7 +10,7 @@
  *   2. Edit code → вставить этот файл → Deploy
  *   3. Settings → Variables → Add secret:
  *        BOT_TOKEN  = токен бота от @BotFather
- *        CHAT_ID    = 448972008   (личный чат Семёна с ботом)
+ *        CHAT_ID    = ваш ID в Telegram (узнать у бота @userinfobot)
  *        ALLOW_ORIGIN = https://<логин>.github.io   (адрес сайта)
  *   4. Скопировать адрес воркера и вставить в index.html вместо
  *      ВСТАВЬТЕ_СЮДА_АДРЕС_ПРОКСИ
