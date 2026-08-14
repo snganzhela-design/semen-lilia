@@ -790,7 +790,7 @@
         <form id="rsvp-form" novalidate>
           <div class="form-row">
             <div class="form-group"><label for="name">Ваше имя и фамилия <span class="req" aria-hidden="true">*</span></label><input type="text" id="name" name="name" placeholder="Иван Иванов" autocomplete="name" required aria-required="true" aria-describedby="name-error" /><span class="field-error" id="name-error" role="alert">Пожалуйста, укажите Ваше имя</span></div>
-            <div class="form-group"><label for="phone">Телефон</label><input type="tel" id="phone" name="phone" placeholder="+7 (___) ___-__-__" autocomplete="tel" /></div>
+            <div class="form-group"><label for="phone">Телефон</label><input type="tel" id="phone" name="phone" placeholder="+7 (___) ___-__-__" autocomplete="tel" inputmode="tel" aria-describedby="phone-error" /><span class="field-error" id="phone-error" role="alert">Похоже, номер введён не полностью</span></div>
           </div>
 
           <div class="form-group">
@@ -915,6 +915,76 @@
     const nameInput = document.getElementById('name');
     nameInput.addEventListener('input', () => nameInput.classList.remove('invalid'));
 
+    /* ── Телефон: код и скобки подставляются сами ──
+       На телефоне «+» спрятан во второй раскладке, поэтому гость набирает
+       только цифры. Привычное начало с 8 тоже принимаем. */
+    const phoneInput = document.getElementById('phone');
+    (function () {
+      const EMPTY = '+7 ';
+      /* Разбор введённого: свой префикс «+7» отрезаем по тексту, а не угадываем по цифрам.
+         Лишние 8 или 7 перед номером — привычка набирать «8 (912)…»; отбрасываем их
+         только когда цифр набралось больше десяти, иначе пострадал бы код 812. */
+      const split = v => {
+        let d = String(v).replace(/^\s*\+?7/, '').replace(/\D/g, '');
+        let dropped = 0;
+        if (d.length > 10 && (d[0] === '8' || d[0] === '7')) { d = d.slice(1); dropped = 1; }
+        return { body: d.slice(0, 10), dropped };
+      };
+      const format = d => {
+        if (!d) return EMPTY;
+        let s = '+7 (' + d.slice(0, 3);
+        if (d.length > 3) s += ') ' + d.slice(3, 6);
+        if (d.length > 6) s += '-' + d.slice(6, 8);
+        if (d.length > 8) s += '-' + d.slice(8, 10);
+        return s;
+      };
+      // курсор возвращаем к той же по счёту цифре, иначе правка в середине номера прыгает в конец
+      const caretAfter = (s, n) => {
+        let seen = 0;
+        for (let i = 0; i < s.length; i++) {
+          if (s[i] >= '0' && s[i] <= '9' && ++seen === n) return i + 1;
+        }
+        return s.length;
+      };
+
+      let prevLen = 0;
+
+      phoneInput.addEventListener('focus', () => {
+        if (!phoneInput.value.trim()) {
+          phoneInput.value = EMPTY;
+          const end = phoneInput.value.length;
+          phoneInput.setSelectionRange(end, end);
+        }
+      });
+
+      phoneInput.addEventListener('input', e => {
+        phoneInput.classList.remove('invalid');
+        const caret = phoneInput.selectionStart === null ? phoneInput.value.length : phoneInput.selectionStart;
+        const res = split(phoneInput.value);
+        let body = res.body;
+
+        // сколько цифр номера стоит слева от курсора; код страны считаем первой цифрой
+        let nBody = phoneInput.value.slice(0, caret).replace(/^\s*\+?7/, '').replace(/\D/g, '').length - res.dropped;
+        let n = Math.min(Math.max(nBody, 0), body.length) + 1;
+
+        // Backspace на «)» или «-» иначе не стирает ничего: цифры не изменились — убираем ту, что перед курсором
+        if (e.inputType === 'deleteContentBackward' && body.length === prevLen && n >= 2) {
+          body = body.slice(0, n - 2) + body.slice(n - 1);
+          n--;
+        }
+
+        prevLen = body.length;
+        phoneInput.value = format(body);
+        const pos = body ? caretAfter(phoneInput.value, n) : phoneInput.value.length;
+        phoneInput.setSelectionRange(pos, pos);
+      });
+
+      // пустую заготовку не оставляем: иначе в анкету уйдёт бессмысленное «+7»
+      phoneInput.addEventListener('blur', () => {
+        if (!split(phoneInput.value).body) { phoneInput.value = ''; prevLen = 0; }
+      });
+    })();
+
     /* ── Отправка ответа ──
        Данные уходят на прокси, а тот пересылает их боту в Telegram.
        Токен бота живёт только на прокси: положить его сюда нельзя —
@@ -930,6 +1000,17 @@
         return;
       }
       nameInput.classList.remove('invalid');
+
+      // недобранный номер бесполезен — по нему до гостя не дозвониться
+      const phoneDigits = phoneInput.value.replace(/\D/g, '').replace(/^[78]/, '');
+      if (phoneDigits.length && phoneDigits.length < 10) {
+        phoneInput.classList.add('invalid');
+        phoneInput.focus();
+        phoneInput.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        return;
+      }
+      phoneInput.classList.remove('invalid');
+
       const btn = document.getElementById('submit-btn');
       const errBox = document.getElementById('send-error');
       errBox.style.display = 'none';
@@ -938,7 +1019,7 @@
       const attend = form.querySelector('input[name="attend"]:checked').value === 'yes';
       const payload = {
         name: nameInput.value.trim(),
-        phone: form.phone.value.trim(),
+        phone: phoneDigits.length === 10 ? phoneInput.value.trim() : '',
         attend: attend ? 'Придёт' : 'Не сможет',
         guests: attend ? form.guests.options[form.guests.selectedIndex].text : '',
         companions: attend ? form.companions.value.trim() : '',
