@@ -307,7 +307,8 @@
     .program-item { display: grid; grid-template-columns: 6rem 1fr; gap: 2rem; padding: 1.45rem 0; position: relative; }
     .program-time { font-family: 'Playfair Display', serif; font-size: 1.02rem; font-weight: 500; letter-spacing: 0.06em;
       color: var(--gold-deep); text-align: right; padding-top: 0.1rem; font-variant-numeric: tabular-nums; }
-    .program-dot { position: absolute; left: calc(7rem - 4px); top: 1.85rem; width: 9px; height: 9px; border-radius: 50%;
+    /* точка встаёт по центру первой строки: отступ ряда + половина строки заголовка − половина точки */
+    .program-dot { position: absolute; left: calc(7rem - 4px); top: calc(1.45rem + 0.98rem - 4.5px); width: 9px; height: 9px; border-radius: 50%;
       background: var(--ivory); border: 1.5px solid var(--gold); box-shadow: 0 0 0 4px rgba(185,156,118,0.12); }
     .program-content h3 { font-family: 'Playfair Display', serif; font-size: 1.12rem; font-weight: 500; color: var(--dark-text); }
     .program-content p { font-size: 1.02rem; font-weight: 300; color: var(--text-m); font-style: italic; }
@@ -641,7 +642,7 @@
         </div>
         <div class="program-item reveal reveal-l">
           <div class="program-time">23:00</div><div class="program-dot" aria-hidden="true"></div>
-          <div class="program-content"><h3>Завершение вечера</h3><p>Тёплые объятия на прощание.</p></div>
+          <div class="program-content"><h3>Завершение вечера</h3><p>Тёплые объятия.</p></div>
         </div>
       </div>
     </section>
